@@ -7,6 +7,8 @@
 # @ SparkFun Electronics
 # DATE: 3/31/2020
 # Updated on 1/20/2021 by Brian Perkins
+# Now use wait_for_edge instead of spinning
+# Work around bizarre Jetson GPIO behavior
 # Based on code from the following blog and tutorials:
 #
 #    Kevin Godden
@@ -62,10 +64,6 @@ GPIO.setmode(GPIO.BOARD)
 # Why do we need to do this? 
 # My guess is the pullup on the PHat doesn't go quite high enough, but there's enough
 # hysteresis in the level shifter that forcing it high keeps it there.
-GPIO.setup(shutdown_pin, GPIO.OUT)
-GPIO.output(shutdown_pin,1)
-
-GPIO.setup(shutdown_pin, GPIO.IN)
 
 
 # modular function to shutdown Pi
@@ -79,9 +77,31 @@ def shut_down():
 
 # Check button if we want to shutdown the Pi safely
 while True:
+    # Yes, you need this insane rigamarole
+    # For some reason when you use wait_for_edge you can't switch directions back to out
+    # But everything works if you unexport the pin.  The easiest way to do this is that
+    # I've found is to call cleanup
+
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD)
+    GPIO.setup(shutdown_pin, GPIO.IN)
+    GPIO.cleanup()
+
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BOARD)
+
+
+    # Why do this? Not sure.
+    # Seems like the level shifter has some hystersis the pullup doesn't overcome
+    # If we don't we can only get one edge
+    GPIO.setup(shutdown_pin, GPIO.OUT)
+    GPIO.output(shutdown_pin,1)
+
+    GPIO.setup(shutdown_pin, GPIO.IN)
 
     # For troubleshooting, uncomment this line to output button status on command line
     #print GPIO.input(shutdown_pin)
-    if GPIO.input(shutdown_pin)== False:
+    if GPIO.wait_for_edge(shutdown_pin, GPIO.FALLING):
+        GPIO.input(shutdown_pin)
         shut_down()
         time.sleep(1)
