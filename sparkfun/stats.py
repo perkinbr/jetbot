@@ -15,6 +15,24 @@ import time
 import qwiic_micro_oled
 from jetbot.utils.utils import get_ip_address
 import subprocess
+import signal
+import os
+import sys
+
+def receive_signal(signum, stack):
+    global disp
+    # Clear Display
+    disp.clear(disp.PAGE)
+    disp.clear(disp.ALL)	
+    #Set Cursor at Origin
+    disp.set_cursor(0,0)
+    disp.print ("Shutting  Down")
+    disp.display()
+    time.sleep(10)
+    sys.exit()
+
+
+signal.signal(signal.SIGTERM, receive_signal)
 
 # Screen Width
 LCDWIDTH = 64
